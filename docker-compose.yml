@@ -1,0 +1,66 @@
+version: '3'
+
+
+services:
+    elasticsearch:
+        privileged: true
+        container_name: elasticsearch
+        build:
+            context: elasticsearch/
+            args:
+                ELK_VERSION: 6.7.0
+        volumes:
+            - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+            - /elasticsearch_data:/usr/share/elasticsearch/data
+#        ports:
+#            - "9200:9200"
+#           - "9300:9300"
+        environment:
+            ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+        networks:
+           elk:
+                aliases:
+                    - elasticsearch.example.com
+
+
+    kibana:
+        container_name: kibana
+        build:
+            context: kibana/
+            args:
+                ELK_VERSION: 6.7.0
+        volumes:
+            - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+#        ports:
+#            - "5601:5601"
+        networks:
+           elk:
+                aliases:
+                    - kibana.example.com
+        depends_on:
+            - elasticsearch
+
+
+    proxyserver:
+            container_name: proxyserver
+            build:
+                context: ./nginx_revers_proxy/config/
+                dockerfile: Dockerfile
+            ports:
+                - "80:80"
+            networks:
+                - elk
+            tty: true
+            privileged: true
+            depends_on:
+                - elasticsearch
+                - kibana
+                
+
+
+
+
+
+networks:
+    elk:
+        driver: bridge

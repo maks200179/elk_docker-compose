@@ -1,0 +1,71 @@
+FROM maxfr1158/centos7:31.19
+
+RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV container docker
+
+RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
+systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+
+
+
+
+
+# Set docker root password
+RUN echo 'user_name:password' | chpasswd
+
+#RUN yum clean all
+#RUN yum clean metadata
+#RUN rm -rf /var/cache/yum
+RUN yum -y update
+RUN yum -y install epel-release
+RUN yum -y install  openssh-server 
+RUN yum -y install nginx
+
+# Set http access  password
+RUN sh -c "echo -n 'user:' >> /etc/nginx/.htpasswd"
+RUN sh -c "openssl passwd password >> /etc/nginx/.htpasswd"
+RUN echo "nginx" > /usr/share/nginx/html/index.html
+RUN systemctl enable nginx
+RUN yum clean all
+RUN rm -rf /var/cache/yum
+
+# Set sshd config
+RUN rm /etc/ssh/sshd_config
+COPY production/sshd_config /etc/ssh/
+RUN chown root:root /etc/ssh/sshd_config
+RUN chmod -R 600 /etc/ssh/sshd_config
+
+
+# Setting  of DateTime Zone
+RUN cp -p /usr/share/zoneinfo/Asia/Jerusalem /etc/localtime
+
+
+
+
+
+
+
+
+
+
+# Set nginx configuration file
+
+RUN rm /etc/nginx/nginx.conf
+COPY production/nginx.conf /etc/nginx/
+RUN chown root:root /etc/nginx/nginx.conf
+RUN chmod -R 644 /etc/nginx/nginx.conf
+
+
+
+ENTRYPOINT ["/usr/sbin/init"]
+VOLUME [ "/sys/fs/cgroup" ]
+
+
